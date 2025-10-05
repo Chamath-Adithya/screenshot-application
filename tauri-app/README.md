@@ -13,6 +13,8 @@ This template should help get you started developing with Tauri, React and Types
 For Desktop development, run:
   yarn tauri dev
 
+  cd tauri-app && RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-lgcc" yarn tauri dev
+  
 For Android development, run:
   yarn tauri android dev
 
