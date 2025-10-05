@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Screenshot App
+Comment=Take screenshots easily
+Exec=screenshot-app
+Icon=screenshot-app
+Terminal=false
+Type=Application
+Categories=Utility;Graphics;
