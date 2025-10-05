@@ -3,6 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Settings {
@@ -105,18 +106,23 @@ async fn capture_fullscreen(app: tauri::AppHandle) -> Result<String, String> {
     let screens = screenshots::Screen::all().map_err(|e| e.to_string())?;
     if let Some(screen) = screens.first() {
         let image = screen.capture().map_err(|e| e.to_string())?;
-        let buffer = image.to_png().map_err(|e| e.to_string())?;
-        
+        let dynamic_image = image::DynamicImage::ImageRgba8(image);
         let settings = load_settings(app.clone()).await?;
         let filename = format!("screenshot_{}.{}", chrono::Utc::now().timestamp(), settings.file_format);
         let mut filepath = PathBuf::from(settings.save_directory.replace("~", &std::env::var("HOME").unwrap_or_default()));
         filepath.push(&filename);
-        
+
         if let Some(parent) = filepath.parent() {
             fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
-        fs::write(&filepath, &buffer).map_err(|e| e.to_string())?;
-        
+
+        // Save based on format
+        if settings.file_format == "jpg" {
+            dynamic_image.save_with_format(&filepath, image::ImageFormat::Jpeg).map_err(|e| e.to_string())?;
+        } else {
+            dynamic_image.save_with_format(&filepath, image::ImageFormat::Png).map_err(|e| e.to_string())?;
+        }
+
         // Add to history
         let entry = HistoryEntry {
             id: uuid::Uuid::new_v4().to_string(),
@@ -127,7 +133,7 @@ async fn capture_fullscreen(app: tauri::AppHandle) -> Result<String, String> {
             tags: vec![],
         };
         add_history(app, entry).await?;
-        
+
         Ok(filepath.to_string_lossy().to_string())
     } else {
         Err("No screens found".to_string())
@@ -150,7 +156,7 @@ async fn save_image(app: tauri::AppHandle, path: String, bytes: Vec<u8>) -> Resu
 async fn copy_image_to_clipboard(_app: tauri::AppHandle, bytes: Vec<u8>) -> Result<(), String> {
     let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
     let image = image::load_from_memory(&bytes).map_err(|e| e.to_string())?;
-    clipboard.set_image(&arboard::ImageData {
+    clipboard.set_image(arboard::ImageData {
         width: image.width() as usize,
         height: image.height() as usize,
         bytes: image.as_bytes().to_vec().into(),
