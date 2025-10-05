@@ -21,9 +21,7 @@
       "csp": null
     }
   },
-  "plugins": {
-    "global-shortcut": {}
-  },
+  "plugins": {},
   "bundle": {
     "active": true,
     "targets": "all",

@@ -104,9 +104,9 @@ async fn clear_history(app: tauri::AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 async fn capture_fullscreen(app: tauri::AppHandle) -> Result<String, String> {
-    let screens = screenshots::Screen::all().map_err(|e| e.to_string())?;
-    if let Some(screen) = screens.first() {
-        let image = screen.capture().map_err(|e| e.to_string())?;
+    let monitors = xcap::Monitor::all().map_err(|e| e.to_string())?;
+    if let Some(monitor) = monitors.first() {
+        let image = monitor.capture_image().map_err(|e| e.to_string())?;
         let width = image.width();
         let height = image.height();
         let dynamic_image = image::DynamicImage::ImageRgba8(image);
@@ -182,7 +182,7 @@ async fn unregister_hotkey(app: tauri::AppHandle, hotkey: String) -> Result<(), 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_global_shortcut::init())
         .invoke_handler(tauri::generate_handler![
             load_settings,
             save_settings,
