@@ -1,9 +1,0 @@
-[package]
-name = "standalone_screenshot"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-xcap = "0.0.10"
-image = "0.25"
-chrono = "0.4"
