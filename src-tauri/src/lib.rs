@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
-use tauri_plugin_global_shortcut::GlobalShortcutExt;
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Settings {
@@ -106,6 +107,8 @@ async fn capture_fullscreen(app: tauri::AppHandle) -> Result<String, String> {
     let screens = screenshots::Screen::all().map_err(|e| e.to_string())?;
     if let Some(screen) = screens.first() {
         let image = screen.capture().map_err(|e| e.to_string())?;
+        let width = image.width();
+        let height = image.height();
         let dynamic_image = image::DynamicImage::ImageRgba8(image);
         let settings = load_settings(app.clone()).await?;
         let filename = format!("screenshot_{}.{}", chrono::Utc::now().timestamp(), settings.file_format);
@@ -128,8 +131,8 @@ async fn capture_fullscreen(app: tauri::AppHandle) -> Result<String, String> {
             id: uuid::Uuid::new_v4().to_string(),
             file_path: filepath.to_string_lossy().to_string(),
             timestamp: chrono::Utc::now().to_rfc3339(),
-            width: image.width(),
-            height: image.height(),
+            width,
+            height,
             tags: vec![],
         };
         add_history(app, entry).await?;
@@ -148,7 +151,7 @@ async fn capture_active_window(app: tauri::AppHandle) -> Result<String, String> 
 }
 
 #[tauri::command]
-async fn save_image(app: tauri::AppHandle, path: String, bytes: Vec<u8>) -> Result<(), String> {
+async fn save_image(_app: tauri::AppHandle, path: String, bytes: Vec<u8>) -> Result<(), String> {
     fs::write(&path, bytes).map_err(|e| e.to_string())
 }
 
@@ -165,12 +168,14 @@ async fn copy_image_to_clipboard(_app: tauri::AppHandle, bytes: Vec<u8>) -> Resu
 
 #[tauri::command]
 async fn register_hotkey(app: tauri::AppHandle, hotkey: String) -> Result<(), String> {
-    app.global_shortcut().register(hotkey).map_err(|e| e.to_string())
+    let shortcut = Shortcut::from_str(&hotkey).map_err(|e| e.to_string())?;
+    app.global_shortcut().register(shortcut).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn unregister_hotkey(app: tauri::AppHandle, hotkey: String) -> Result<(), String> {
-    app.global_shortcut().unregister(hotkey).map_err(|e| e.to_string())
+    let shortcut = Shortcut::from_str(&hotkey).map_err(|e| e.to_string())?;
+    app.global_shortcut().unregister(shortcut).map_err(|e| e.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
