@@ -188,3 +188,52 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+    use tauri::test::mock_app;
+
+    #[test]
+    fn test_settings_serialization() {
+        let settings = Settings {
+            save_directory: "~/Pictures/Screenshots".to_string(),
+            file_format: "png".to_string(),
+            auto_copy: true,
+            hotkeys: HashMap::from([
+                ("capture_fullscreen".to_string(), "CmdOrCtrl+Shift+S".to_string()),
+            ]),
+            last_version: "0.1.0".to_string(),
+        };
+
+        let json = serde_json::to_string(&settings).unwrap();
+        let deserialized: Settings = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(settings.save_directory, deserialized.save_directory);
+        assert_eq!(settings.file_format, deserialized.file_format);
+        assert_eq!(settings.auto_copy, deserialized.auto_copy);
+    }
+
+    #[test]
+    fn test_history_serialization() {
+        let history = vec![
+            HistoryEntry {
+                id: "test-id".to_string(),
+                file_path: "/path/to/screenshot.png".to_string(),
+                timestamp: "2025-10-05T14:02:00Z".to_string(),
+                width: 1920,
+                height: 1080,
+                tags: vec!["test".to_string()],
+            }
+        ];
+
+        let json = serde_json::to_string(&history).unwrap();
+        let deserialized: Vec<HistoryEntry> = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(history.len(), deserialized.len());
+        assert_eq!(history[0].id, deserialized[0].id);
+        assert_eq!(history[0].file_path, deserialized[0].file_path);
+    }
+}
