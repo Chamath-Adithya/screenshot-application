@@ -182,7 +182,7 @@ async fn unregister_hotkey(app: tauri::AppHandle, hotkey: String) -> Result<(), 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_global_shortcut::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             load_settings,
             save_settings,
