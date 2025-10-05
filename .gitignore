@@ -68,3 +68,5 @@ coverage/
 # Miscellaneous
 *.tgz
 *.tar.gz
+
+tauri-app/src-tauri/gen/android/
