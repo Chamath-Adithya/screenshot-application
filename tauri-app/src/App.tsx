@@ -18,6 +18,10 @@ function App() {
   const [convertFormat, setConvertFormat] = useState<string>("jpeg");
   const [processing, setProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState<string | null>(null);
+  const [areaX, setAreaX] = useState<string>("100");
+  const [areaY, setAreaY] = useState<string>("100");
+  const [areaWidth, setAreaWidth] = useState<string>("800");
+  const [areaHeight, setAreaHeight] = useState<string>("600");
 
   useEffect(() => {
     loadSavedScreenshots();
@@ -150,26 +154,160 @@ function App() {
     }
   }
 
+  async function captureArea() {
+    setLoading(true);
+    setError(null);
+    try {
+      const x = parseInt(areaX);
+      const y = parseInt(areaY);
+      const width = parseInt(areaWidth);
+      const height = parseInt(areaHeight);
+
+      if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height) ||
+          x < 0 || y < 0 || width <= 0 || height <= 0) {
+        throw new Error("Invalid area coordinates or dimensions");
+      }
+
+      const base64Data = await invoke<string>("capture_area", {
+        x, y, width, height
+      });
+      setScreenshot(base64Data);
+      setScreenshotDimensions({ width, height });
+      setSaveMessage(null);
+    } catch (err) {
+      setError(err as string);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="container">
       <h1>Screenshot Application</h1>
 
-      <div className="row">
-        <button
-          onClick={captureScreenshot}
-          disabled={loading}
-          style={{
-            padding: "10px 20px",
-            fontSize: "16px",
-            backgroundColor: loading ? "#ccc" : "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: loading ? "not-allowed" : "pointer"
-          }}
-        >
-          {loading ? "Capturing..." : "Capture Fullscreen"}
-        </button>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "20px",
+        marginBottom: "20px"
+      }}>
+        {/* Fullscreen Capture */}
+        <div style={{
+          border: "1px solid #ddd",
+          borderRadius: "5px",
+          padding: "15px",
+          backgroundColor: "#f8f9fa"
+        }}>
+          <h3 style={{ marginTop: 0, color: "#333" }}>Fullscreen Capture</h3>
+          <button
+            onClick={captureScreenshot}
+            disabled={loading}
+            style={{
+              padding: "10px 20px",
+              fontSize: "16px",
+              backgroundColor: loading ? "#ccc" : "#007bff",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: loading ? "not-allowed" : "pointer",
+              width: "100%"
+            }}
+          >
+            {loading ? "Capturing..." : "Capture Fullscreen"}
+          </button>
+        </div>
+
+        {/* Area Selection */}
+        <div style={{
+          border: "1px solid #ddd",
+          borderRadius: "5px",
+          padding: "15px",
+          backgroundColor: "#f8f9fa"
+        }}>
+          <h3 style={{ marginTop: 0, color: "#333" }}>Area Selection</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "3px" }}>
+                X Position:
+              </label>
+              <input
+                type="number"
+                value={areaX}
+                onChange={(e) => setAreaX(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "5px",
+                  borderRadius: "3px",
+                  border: "1px solid #ccc"
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "3px" }}>
+                Y Position:
+              </label>
+              <input
+                type="number"
+                value={areaY}
+                onChange={(e) => setAreaY(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "5px",
+                  borderRadius: "3px",
+                  border: "1px solid #ccc"
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "3px" }}>
+                Width:
+              </label>
+              <input
+                type="number"
+                value={areaWidth}
+                onChange={(e) => setAreaWidth(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "5px",
+                  borderRadius: "3px",
+                  border: "1px solid #ccc"
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "3px" }}>
+                Height:
+              </label>
+              <input
+                type="number"
+                value={areaHeight}
+                onChange={(e) => setAreaHeight(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "5px",
+                  borderRadius: "3px",
+                  border: "1px solid #ccc"
+                }}
+              />
+            </div>
+          </div>
+          <button
+            onClick={captureArea}
+            disabled={loading}
+            style={{
+              padding: "10px 20px",
+              fontSize: "16px",
+              backgroundColor: loading ? "#ccc" : "#dc3545",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: loading ? "not-allowed" : "pointer",
+              width: "100%"
+            }}
+          >
+            {loading ? "Capturing..." : "Capture Area"}
+          </button>
+        </div>
       </div>
 
       <div style={{

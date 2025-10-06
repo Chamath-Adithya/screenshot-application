@@ -1,5 +1,6 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use base64::Engine;
+use image::GenericImageView;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -161,11 +162,53 @@ fn convert_screenshot_format(filename: &str, format: &str) -> Result<String, Str
     Ok(converted_filename)
 }
 
+#[tauri::command]
+fn capture_area(x: u32, y: u32, width: u32, height: u32) -> Result<String, String> {
+    let screens = screenshots::Screen::all().map_err(|e| e.to_string())?;
+
+    if screens.is_empty() {
+        return Err("No screens found".to_string());
+    }
+
+    // For area selection, we'll capture the full screen and then crop it
+    // This is a simplified approach - in a real implementation, you might want
+    // to use platform-specific APIs for more efficient area capture
+    let screen = &screens[0];
+    let full_image = screen.capture().map_err(|e| e.to_string())?;
+
+    // Validate coordinates and dimensions
+    let screen_width = screen.display_info.width;
+    let screen_height = screen.display_info.height;
+
+    if x >= screen_width || y >= screen_height {
+        return Err("Selection coordinates are outside screen bounds".to_string());
+    }
+
+    let crop_width = if x + width > screen_width { screen_width - x } else { width };
+    let crop_height = if y + height > screen_height { screen_height - y } else { height };
+
+    if crop_width == 0 || crop_height == 0 {
+        return Err("Invalid crop dimensions".to_string());
+    }
+
+    // Crop the image using view
+    let cropped = full_image.view(x, y, crop_width, crop_height).to_image();
+
+    // Convert to PNG and then to base64
+    let mut png_data = Vec::new();
+    cropped.write_to(&mut std::io::Cursor::new(&mut png_data), screenshots::image::ImageFormat::Png)
+        .map_err(|e| e.to_string())?;
+
+    let base64_string = base64::engine::general_purpose::STANDARD.encode(&png_data);
+
+    Ok(base64_string)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, capture_fullscreen, save_screenshot, list_screenshots, load_screenshot, resize_screenshot, convert_screenshot_format])
+        .invoke_handler(tauri::generate_handler![greet, capture_fullscreen, save_screenshot, list_screenshots, load_screenshot, resize_screenshot, convert_screenshot_format, capture_area])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
