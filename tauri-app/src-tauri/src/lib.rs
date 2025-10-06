@@ -5,7 +5,7 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn capture_fullscreen() -> Result<String, String> {
+fn capture_fullscreen() -> Result<(String, u32, u32), String> {
     let screens = screenshots::Screen::all().map_err(|e| e.to_string())?;
 
     if screens.is_empty() {
@@ -19,17 +19,23 @@ fn capture_fullscreen() -> Result<String, String> {
     // Convert to base64
     let buffer = image.as_raw();
     let base64_string = base64::encode(buffer);
+    let width = image.width();
+    let height = image.height();
 
-    Ok(base64_string)
+    Ok((base64_string, width, height))
 }
 
 #[tauri::command]
-fn save_screenshot(base64_data: &str, filename: &str) -> Result<String, String> {
+fn save_screenshot(base64_data: &str, width: u32, height: u32, filename: &str) -> Result<String, String> {
     use std::fs;
     use std::path::Path;
 
     // Decode base64 data
-    let image_data = base64::decode(base64_data).map_err(|e| e.to_string())?;
+    let rgba_data = base64::decode(base64_data).map_err(|e| e.to_string())?;
+
+    // Create ImageBuffer from RGBA data
+    let img_buffer = screenshots::image::ImageBuffer::<screenshots::image::Rgba<u8>, _>::from_raw(width, height, rgba_data)
+        .ok_or("Failed to create image buffer")?;
 
     // Create screenshots directory if it doesn't exist
     let screenshots_dir = Path::new("screenshots");
@@ -37,9 +43,9 @@ fn save_screenshot(base64_data: &str, filename: &str) -> Result<String, String> 
         fs::create_dir_all(screenshots_dir).map_err(|e| e.to_string())?;
     }
 
-    // Save the file
+    // Save as PNG
     let file_path = screenshots_dir.join(filename);
-    fs::write(&file_path, image_data).map_err(|e| e.to_string())?;
+    img_buffer.save(&file_path).map_err(|e| e.to_string())?;
 
     Ok(file_path.to_string_lossy().to_string())
 }

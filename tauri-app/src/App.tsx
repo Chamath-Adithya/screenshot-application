@@ -4,6 +4,7 @@ import "./App.css";
 
 function App() {
   const [screenshot, setScreenshot] = useState<string | null>(null);
+  const [screenshotDimensions, setScreenshotDimensions] = useState<{width: number, height: number} | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -27,8 +28,9 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const base64Data = await invoke<string>("capture_fullscreen");
+      const [base64Data, width, height] = await invoke<[string, number, number]>("capture_fullscreen");
       setScreenshot(base64Data);
+      setScreenshotDimensions({ width, height });
       setSaveMessage(null);
     } catch (err) {
       setError(err as string);
@@ -38,15 +40,22 @@ function App() {
   }
 
   async function saveScreenshot() {
-    if (!screenshot) return;
+    if (!screenshot || !screenshotDimensions) return;
 
     setSaving(true);
     setSaveMessage(null);
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       const filename = `screenshot-${timestamp}.png`;
-      const filePath = await invoke<string>("save_screenshot", { base64Data: screenshot, filename });
+      const filePath = await invoke<string>("save_screenshot", {
+        base64Data: screenshot,
+        width: screenshotDimensions.width,
+        height: screenshotDimensions.height,
+        filename
+      });
       setSaveMessage(`Screenshot saved to: ${filePath}`);
+      // Refresh the screenshot list
+      loadSavedScreenshots();
     } catch (err) {
       setSaveMessage(`Error saving screenshot: ${err}`);
     } finally {
