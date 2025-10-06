@@ -12,6 +12,12 @@ function App() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedScreenshots, setSavedScreenshots] = useState<string[]>([]);
   const [screenshotPreviews, setScreenshotPreviews] = useState<{[key: string]: string}>({});
+  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+  const [resizeWidth, setResizeWidth] = useState<string>("800");
+  const [resizeHeight, setResizeHeight] = useState<string>("600");
+  const [convertFormat, setConvertFormat] = useState<string>("jpeg");
+  const [processing, setProcessing] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadSavedScreenshots();
@@ -94,6 +100,53 @@ function App() {
       setSaveMessage(`Error saving screenshot: ${err}`);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function resizeScreenshot() {
+    if (!selectedScreenshot) return;
+
+    setProcessing(true);
+    setProcessingMessage(null);
+    try {
+      const width = parseInt(resizeWidth);
+      const height = parseInt(resizeHeight);
+      if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+        throw new Error("Invalid dimensions");
+      }
+
+      const resizedFilename = await invoke<string>("resize_screenshot", {
+        filename: selectedScreenshot,
+        width,
+        height
+      });
+      setProcessingMessage(`Screenshot resized and saved as: ${resizedFilename}`);
+      // Refresh the screenshot list
+      loadSavedScreenshots();
+    } catch (err) {
+      setProcessingMessage(`Error resizing screenshot: ${err}`);
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function convertScreenshotFormat() {
+    if (!selectedScreenshot) return;
+
+    setProcessing(true);
+    setProcessingMessage(null);
+    try {
+      const convertedFilename = await invoke<string>("convert_screenshot_format", {
+        filename: selectedScreenshot,
+        format: convertFormat
+      });
+      setProcessingMessage(`Screenshot converted and saved as: ${convertedFilename}`);
+      // Refresh the screenshot list
+      loadSavedScreenshots();
+    } catch (err) {
+      setProcessingMessage(`Error converting screenshot: ${err}`);
+    } finally {
+      setProcessing(false);
     }
   }
 
@@ -241,6 +294,163 @@ function App() {
           {savedScreenshots.length > 10 && (
             <div style={{ marginTop: "10px", fontSize: "14px", color: "#666" }}>
               And {savedScreenshots.length - 10} more...
+            </div>
+          )}
+        </div>
+      )}
+
+      {savedScreenshots.length > 0 && (
+        <div style={{ marginTop: "30px" }}>
+          <h3>Image Processing Tools</h3>
+
+          <div style={{ marginBottom: "15px" }}>
+            <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>
+              Select Screenshot:
+            </label>
+            <select
+              value={selectedScreenshot || ""}
+              onChange={(e) => setSelectedScreenshot(e.target.value || null)}
+              style={{
+                width: "100%",
+                padding: "8px",
+                borderRadius: "3px",
+                border: "1px solid #ccc",
+                fontSize: "14px"
+              }}
+            >
+              <option value="">Choose a screenshot...</option>
+              {savedScreenshots.map((filename, index) => (
+                <option key={index} value={filename}>
+                  {filename}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedScreenshot && (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "20px",
+              marginTop: "15px"
+            }}>
+              {/* Resize Section */}
+              <div style={{
+                border: "1px solid #ddd",
+                borderRadius: "5px",
+                padding: "15px",
+                backgroundColor: "#f9f9f9"
+              }}>
+                <h4 style={{ marginTop: 0, color: "#333" }}>Resize Image</h4>
+                <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", marginBottom: "3px" }}>
+                      Width:
+                    </label>
+                    <input
+                      type="number"
+                      value={resizeWidth}
+                      onChange={(e) => setResizeWidth(e.target.value)}
+                      style={{
+                        width: "80px",
+                        padding: "5px",
+                        borderRadius: "3px",
+                        border: "1px solid #ccc"
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", marginBottom: "3px" }}>
+                      Height:
+                    </label>
+                    <input
+                      type="number"
+                      value={resizeHeight}
+                      onChange={(e) => setResizeHeight(e.target.value)}
+                      style={{
+                        width: "80px",
+                        padding: "5px",
+                        borderRadius: "3px",
+                        border: "1px solid #ccc"
+                      }}
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={resizeScreenshot}
+                  disabled={processing}
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: processing ? "#ccc" : "#17a2b8",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "3px",
+                    cursor: processing ? "not-allowed" : "pointer",
+                    fontSize: "14px"
+                  }}
+                >
+                  {processing ? "Processing..." : "Resize & Save"}
+                </button>
+              </div>
+
+              {/* Convert Format Section */}
+              <div style={{
+                border: "1px solid #ddd",
+                borderRadius: "5px",
+                padding: "15px",
+                backgroundColor: "#f9f9f9"
+              }}>
+                <h4 style={{ marginTop: 0, color: "#333" }}>Convert Format</h4>
+                <div style={{ marginBottom: "10px" }}>
+                  <label style={{ display: "block", fontSize: "12px", marginBottom: "3px" }}>
+                    Format:
+                  </label>
+                  <select
+                    value={convertFormat}
+                    onChange={(e) => setConvertFormat(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "5px",
+                      borderRadius: "3px",
+                      border: "1px solid #ccc",
+                      fontSize: "14px"
+                    }}
+                  >
+                    <option value="jpeg">JPEG</option>
+                    <option value="png">PNG</option>
+                    <option value="bmp">BMP</option>
+                    <option value="tiff">TIFF</option>
+                  </select>
+                </div>
+                <button
+                  onClick={convertScreenshotFormat}
+                  disabled={processing}
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: processing ? "#ccc" : "#6f42c1",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "3px",
+                    cursor: processing ? "not-allowed" : "pointer",
+                    fontSize: "14px"
+                  }}
+                >
+                  {processing ? "Processing..." : "Convert & Save"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {processingMessage && (
+            <div style={{
+              marginTop: "15px",
+              padding: "10px",
+              borderRadius: "3px",
+              backgroundColor: processingMessage.includes("Error") ? "#f8d7da" : "#d4edda",
+              color: processingMessage.includes("Error") ? "#721c24" : "#155724",
+              border: `1px solid ${processingMessage.includes("Error") ? "#f5c6cb" : "#c3e6cb"}`
+            }}>
+              {processingMessage}
             </div>
           )}
         </div>
