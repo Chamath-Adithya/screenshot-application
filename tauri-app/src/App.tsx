@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
@@ -8,6 +8,20 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [savedScreenshots, setSavedScreenshots] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadSavedScreenshots();
+  }, []);
+
+  async function loadSavedScreenshots() {
+    try {
+      const screenshots = await invoke<string[]>("list_screenshots");
+      setSavedScreenshots(screenshots);
+    } catch (err) {
+      console.error("Failed to load screenshots:", err);
+    }
+  }
 
   async function captureScreenshot() {
     setLoading(true);
@@ -103,6 +117,53 @@ function App() {
               color: saveMessage.includes("Error") ? "red" : "green"
             }}>
               {saveMessage}
+            </div>
+          )}
+        </div>
+      )}
+
+      {savedScreenshots.length > 0 && (
+        <div style={{ marginTop: "30px" }}>
+          <h3>Saved Screenshots ({savedScreenshots.length})</h3>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+            gap: "10px",
+            marginTop: "10px"
+          }}>
+            {savedScreenshots.slice(0, 10).map((filename, index) => (
+              <div key={index} style={{
+                border: "1px solid #ccc",
+                borderRadius: "5px",
+                padding: "5px",
+                textAlign: "center"
+              }}>
+                <div style={{
+                  fontSize: "12px",
+                  marginBottom: "5px",
+                  wordBreak: "break-all"
+                }}>
+                  {filename}
+                </div>
+                <div style={{
+                  width: "100%",
+                  height: "80px",
+                  backgroundColor: "#f0f0f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "3px",
+                  fontSize: "10px",
+                  color: "#666"
+                }}>
+                  Screenshot
+                </div>
+              </div>
+            ))}
+          </div>
+          {savedScreenshots.length > 10 && (
+            <div style={{ marginTop: "10px", fontSize: "14px", color: "#666" }}>
+              And {savedScreenshots.length - 10} more...
             </div>
           )}
         </div>
