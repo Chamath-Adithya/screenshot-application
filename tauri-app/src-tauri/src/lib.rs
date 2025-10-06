@@ -1,4 +1,6 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+use base64::Engine;
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -18,7 +20,7 @@ fn capture_fullscreen() -> Result<(String, u32, u32), String> {
 
     // Convert to base64
     let buffer = image.as_raw();
-    let base64_string = base64::encode(buffer);
+    let base64_string = base64::engine::general_purpose::STANDARD.encode(buffer);
     let width = image.width();
     let height = image.height();
 
@@ -31,7 +33,7 @@ fn save_screenshot(base64_data: &str, width: u32, height: u32, filename: &str) -
     use std::path::Path;
 
     // Decode base64 data
-    let rgba_data = base64::decode(base64_data).map_err(|e| e.to_string())?;
+    let rgba_data = base64::engine::general_purpose::STANDARD.decode(base64_data).map_err(|e| e.to_string())?;
 
     // Create ImageBuffer from RGBA data
     let img_buffer = screenshots::image::ImageBuffer::<screenshots::image::Rgba<u8>, _>::from_raw(width, height, rgba_data)
@@ -94,7 +96,7 @@ fn load_screenshot(filename: &str) -> Result<String, String> {
     }
 
     let image_data = fs::read(&file_path).map_err(|e| e.to_string())?;
-    let base64_string = base64::encode(&image_data);
+    let base64_string = base64::engine::general_purpose::STANDARD.encode(&image_data);
 
     Ok(base64_string)
 }
