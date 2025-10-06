@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 
 function App() {
@@ -14,6 +15,20 @@ function App() {
 
   useEffect(() => {
     loadSavedScreenshots();
+
+    // Add keyboard shortcut listener
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === 'S') {
+        event.preventDefault();
+        captureScreenshot();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   useEffect(() => {
@@ -102,6 +117,20 @@ function App() {
         >
           {loading ? "Capturing..." : "Capture Fullscreen"}
         </button>
+      </div>
+
+      <div style={{
+        marginTop: "10px",
+        fontSize: "14px",
+        color: "#666",
+        textAlign: "center"
+      }}>
+        💡 Tip: Use <kbd style={{
+          backgroundColor: "#f0f0f0",
+          padding: "2px 6px",
+          borderRadius: "3px",
+          fontSize: "12px"
+        }}>Ctrl+Shift+S</kbd> for quick screenshot capture
       </div>
 
       {error && (

@@ -108,3 +108,46 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+fn capture_fullscreen_impl() -> Result<(String, u32, u32), String> {
+    let screens = screenshots::Screen::all().map_err(|e| e.to_string())?;
+
+    if screens.is_empty() {
+        return Err("No screens found".to_string());
+    }
+
+    // Capture the primary screen (first screen)
+    let screen = &screens[0];
+    let image = screen.capture().map_err(|e| e.to_string())?;
+
+    // Convert to PNG and then to base64
+    let mut png_data = Vec::new();
+    image.write_to(&mut std::io::Cursor::new(&mut png_data), screenshots::image::ImageFormat::Png)
+        .map_err(|e| e.to_string())?;
+
+    let base64_string = base64::engine::general_purpose::STANDARD.encode(&png_data);
+    let width = image.width();
+    let height = image.height();
+
+    Ok((base64_string, width, height))
+}
+
+fn save_screenshot_impl(base64_data: &str, filename: &str) -> Result<String, String> {
+    use std::fs;
+    use std::path::Path;
+
+    // Decode base64 PNG data
+    let png_data = base64::engine::general_purpose::STANDARD.decode(base64_data).map_err(|e| e.to_string())?;
+
+    // Create screenshots directory if it doesn't exist
+    let screenshots_dir = Path::new("screenshots");
+    if !screenshots_dir.exists() {
+        fs::create_dir_all(screenshots_dir).map_err(|e| e.to_string())?;
+    }
+
+    // Save PNG data directly
+    let file_path = screenshots_dir.join(filename);
+    fs::write(&file_path, png_data).map_err(|e| e.to_string())?;
+
+    Ok(file_path.to_string_lossy().to_string())
+}
