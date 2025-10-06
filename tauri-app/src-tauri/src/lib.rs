@@ -18,9 +18,12 @@ fn capture_fullscreen() -> Result<(String, u32, u32), String> {
     let screen = &screens[0];
     let image = screen.capture().map_err(|e| e.to_string())?;
 
-    // Convert to base64
-    let buffer = image.as_raw();
-    let base64_string = base64::engine::general_purpose::STANDARD.encode(buffer);
+    // Convert to PNG and then to base64
+    let mut png_data = Vec::new();
+    image.write_to(&mut std::io::Cursor::new(&mut png_data), screenshots::image::ImageFormat::Png)
+        .map_err(|e| e.to_string())?;
+
+    let base64_string = base64::engine::general_purpose::STANDARD.encode(&png_data);
     let width = image.width();
     let height = image.height();
 
@@ -28,16 +31,12 @@ fn capture_fullscreen() -> Result<(String, u32, u32), String> {
 }
 
 #[tauri::command]
-fn save_screenshot(base64_data: &str, width: u32, height: u32, filename: &str) -> Result<String, String> {
+fn save_screenshot(base64_data: &str, filename: &str) -> Result<String, String> {
     use std::fs;
     use std::path::Path;
 
-    // Decode base64 data
-    let rgba_data = base64::engine::general_purpose::STANDARD.decode(base64_data).map_err(|e| e.to_string())?;
-
-    // Create ImageBuffer from RGBA data
-    let img_buffer = screenshots::image::ImageBuffer::<screenshots::image::Rgba<u8>, _>::from_raw(width, height, rgba_data)
-        .ok_or("Failed to create image buffer")?;
+    // Decode base64 PNG data
+    let png_data = base64::engine::general_purpose::STANDARD.decode(base64_data).map_err(|e| e.to_string())?;
 
     // Create screenshots directory if it doesn't exist
     let screenshots_dir = Path::new("screenshots");
@@ -45,9 +44,9 @@ fn save_screenshot(base64_data: &str, width: u32, height: u32, filename: &str) -
         fs::create_dir_all(screenshots_dir).map_err(|e| e.to_string())?;
     }
 
-    // Save as PNG
+    // Save PNG data directly
     let file_path = screenshots_dir.join(filename);
-    img_buffer.save(&file_path).map_err(|e| e.to_string())?;
+    fs::write(&file_path, png_data).map_err(|e| e.to_string())?;
 
     Ok(file_path.to_string_lossy().to_string())
 }

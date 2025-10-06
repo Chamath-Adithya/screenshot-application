@@ -61,7 +61,7 @@ function App() {
   }
 
   async function saveScreenshot() {
-    if (!screenshot || !screenshotDimensions) return;
+    if (!screenshot) return;
 
     setSaving(true);
     setSaveMessage(null);
@@ -70,8 +70,6 @@ function App() {
       const filename = `screenshot-${timestamp}.png`;
       const filePath = await invoke<string>("save_screenshot", {
         base64Data: screenshot,
-        width: screenshotDimensions.width,
-        height: screenshotDimensions.height,
         filename
       });
       setSaveMessage(`Screenshot saved to: ${filePath}`);
