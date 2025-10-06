@@ -81,11 +81,29 @@ fn list_screenshots() -> Result<Vec<String>, String> {
     Ok(screenshots)
 }
 
+#[tauri::command]
+fn load_screenshot(filename: &str) -> Result<String, String> {
+    use std::fs;
+    use std::path::Path;
+
+    let screenshots_dir = Path::new("screenshots");
+    let file_path = screenshots_dir.join(filename);
+
+    if !file_path.exists() {
+        return Err("Screenshot file not found".to_string());
+    }
+
+    let image_data = fs::read(&file_path).map_err(|e| e.to_string())?;
+    let base64_string = base64::encode(&image_data);
+
+    Ok(base64_string)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, capture_fullscreen, save_screenshot, list_screenshots])
+        .invoke_handler(tauri::generate_handler![greet, capture_fullscreen, save_screenshot, list_screenshots, load_screenshot])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

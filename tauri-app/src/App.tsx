@@ -10,10 +10,31 @@ function App() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedScreenshots, setSavedScreenshots] = useState<string[]>([]);
+  const [screenshotPreviews, setScreenshotPreviews] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     loadSavedScreenshots();
   }, []);
+
+  useEffect(() => {
+    // Load previews for all screenshots
+    const loadPreviews = async () => {
+      const previews: {[key: string]: string} = {};
+      for (const filename of savedScreenshots.slice(0, 10)) { // Load first 10
+        try {
+          const base64Data = await invoke<string>("load_screenshot", { filename });
+          previews[filename] = base64Data;
+        } catch (err) {
+          console.error(`Failed to load preview for ${filename}:`, err);
+        }
+      }
+      setScreenshotPreviews(previews);
+    };
+
+    if (savedScreenshots.length > 0) {
+      loadPreviews();
+    }
+  }, [savedScreenshots]);
 
   async function loadSavedScreenshots() {
     try {
@@ -145,28 +166,48 @@ function App() {
                 border: "1px solid #ccc",
                 borderRadius: "5px",
                 padding: "5px",
-                textAlign: "center"
-              }}>
+                textAlign: "center",
+                cursor: "pointer",
+                transition: "transform 0.2s"
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
+              onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+              >
                 <div style={{
-                  fontSize: "12px",
-                  marginBottom: "5px",
-                  wordBreak: "break-all"
-                }}>
-                  {filename}
-                </div>
-                <div style={{
-                  width: "100%",
-                  height: "80px",
-                  backgroundColor: "#f0f0f0",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "3px",
                   fontSize: "10px",
+                  marginBottom: "5px",
+                  wordBreak: "break-all",
                   color: "#666"
                 }}>
-                  Screenshot
+                  {filename.replace('screenshot-', '').replace('.png', '').replace('T', ' ').slice(0, 16)}
                 </div>
+                {screenshotPreviews[filename] ? (
+                  <img
+                    src={`data:image/png;base64,${screenshotPreviews[filename]}`}
+                    alt={filename}
+                    style={{
+                      width: "100%",
+                      height: "80px",
+                      objectFit: "cover",
+                      borderRadius: "3px",
+                      border: "1px solid #ddd"
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: "100%",
+                    height: "80px",
+                    backgroundColor: "#f0f0f0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "3px",
+                    fontSize: "10px",
+                    color: "#666"
+                  }}>
+                    Loading...
+                  </div>
+                )}
               </div>
             ))}
           </div>
